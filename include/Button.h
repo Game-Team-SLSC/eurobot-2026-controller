@@ -12,6 +12,7 @@ class Button {
     Button(int p);
     void update();
     bool isPressed(); // Retourne true si le bouton a été pressé
+    bool isHeld();    // Retourne true tant que le bouton est maintenu appuye
     int getPin();     // Retourne le numéro de broche
 };
 

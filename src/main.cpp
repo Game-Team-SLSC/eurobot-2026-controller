@@ -12,16 +12,16 @@
 #include <LiquidCrystal_I2C.h>
 
 // Définitions des broches
-#define BUTTON1_PIN 22
-#define BUTTON2_PIN 23
-#define BUTTON3_PIN 24
-#define BUTTON4_PIN 25
-#define BUTTON5_PIN 26
-#define BUTTON6_PIN 27
-#define BUTTON7_PIN 28
-#define BUTTON8_PIN 29
-#define BUTTON9_PIN 30
-#define BUTTON10_PIN 31
+#define LSIDE_L_BTN 22
+#define LSIDE_U_BTN 23
+#define LSIDE_D_BTN 24
+#define LSIDE_R_BTN 25
+#define RSIDE_L_BTN 26
+#define RSIDE_D_BTN 27
+#define DOUBLE_D_BTN 28
+#define RSIDE_R_BTN 29
+#define RSIDE_U_BTN 30
+#define DOUBLE_U_BTN 31
 
 #define JOYSTICK_RIGHT_VERT A1
 #define JOYSTICK_RIGHT_HORIZ A0
@@ -62,10 +62,10 @@ volatile EncoderState lastEncoderState = ENCODER_A_LOW_B_LOW;
 
 // Initialisation des objets
 Button buttons[10] = {
-  Button(BUTTON1_PIN), Button(BUTTON2_PIN), Button(BUTTON3_PIN),
-  Button(BUTTON4_PIN), Button(BUTTON5_PIN), Button(BUTTON6_PIN),
-  Button(BUTTON7_PIN), Button(BUTTON8_PIN), Button(BUTTON9_PIN),
-  Button(BUTTON10_PIN)
+  Button(LSIDE_L_BTN), Button(LSIDE_U_BTN), Button(LSIDE_D_BTN),
+  Button(LSIDE_R_BTN), Button(RSIDE_L_BTN), Button(RSIDE_U_BTN),
+  Button(RSIDE_D_BTN), Button(RSIDE_R_BTN), Button(DOUBLE_U_BTN),
+  Button(DOUBLE_D_BTN)
 };
 
 Joystick joystickRight(JOYSTICK_RIGHT_VERT, JOYSTICK_RIGHT_HORIZ, JOYSTICK_RIGHT_SW);
@@ -163,6 +163,8 @@ void setup() {
 
   // Configuration des interruptions PCINT pour l'encodeur
   setupPCINT();
+
+
 }
 
 void loop() {
@@ -192,7 +194,7 @@ void loop() {
 
   // Boutons
   for (int i = 0; i < 10; i++) {
-    remoteData.buttons[i] = buttons[i].isPressed();
+    remoteData.buttons[i] = buttons[i].isHeld();
   }
 
 

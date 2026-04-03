@@ -12,6 +12,10 @@ bool Button::isPressed() {
   return button.isPressed(); // Retourne true si le bouton a été pressé
 }
 
+bool Button::isHeld() {
+  return button.getState() == LOW; // Avec INPUT_PULLUP, LOW signifie appuye
+}
+
 int Button::getPin() {
   return pin; // Retourne le numéro de broche
 }

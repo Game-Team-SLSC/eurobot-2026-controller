@@ -1,6 +1,6 @@
 #include "ThreePosButton.h"
 
-ThreePosButton::ThreePosButton(int pU, int pD) : buttonUp(pU), buttonDown(pD), state(MIDDLE) {
+ThreePosButton::ThreePosButton(int pU, int pD) : buttonUp(pU), buttonDown(pD), state(SWITCH_3_POS::MIDDLE) {
   buttonUp.setDebounceTime(50);   // Débounce de 50 ms
   buttonDown.setDebounceTime(50); // Débounce de 50 ms
 }
@@ -10,11 +10,11 @@ void ThreePosButton::update() {
   buttonDown.loop(); // Mise à jour de l'état du bouton Down avec debounce
 
   if (buttonUp.isPressed()) {
-    state = UP;
+    state = SWITCH_3_POS::UP;
   } else if (buttonDown.isPressed()) {
-    state = DOWN;
+    state = SWITCH_3_POS::DOWN;
   } else {
-    state = MIDDLE;
+    state = SWITCH_3_POS::MIDDLE; // Si aucun bouton n'est pressé, on considère que le bouton est au milieu
   }
 }
 

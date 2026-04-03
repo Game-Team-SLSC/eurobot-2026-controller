@@ -4,20 +4,18 @@
 #include <Arduino.h>
 #include <JoystickData.h>
 
-enum SWITCH_3_POS {UP, DOWN, MIDDLE};
+enum class SWITCH_3_POS: uint8_t {UP, DOWN, MIDDLE};
 
-struct RemoteData
-{
-    JoystickData joystickLeft;
-    JoystickData joystickRight;
+struct RemoteData {
+        JoystickData joystickLeft{};
+        JoystickData joystickRight{};
 
-    bool buttons[15] = {
-        false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
+        bool buttons[15] = {
+            false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
+        };
+        // for each button true if pressed
+        uint8_t slider = 0; // 0 to 255
+        uint8_t score = 0;  // 0 to 255
     };
-    // for each button true if pressed
-    byte slider; // 0 to 255
-    byte score; // 0 to 255
-  
-};
 
 #endif

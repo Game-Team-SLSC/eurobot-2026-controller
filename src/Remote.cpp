@@ -1,6 +1,7 @@
 #include "Remote.h"
 #include <RF24.h>
 #include <SecretSettings.h>
+#include <printf.h>
 
 #define Motor_Vibr 56
 
@@ -8,6 +9,7 @@ Remote::Remote() : radio(48, 49) {}
 
 void Remote::setup() {
   radio.begin();
+  printf_begin(); // Initialiser printf pour le moniteur série
 
   radio.openWritingPipe((const byte*)RF_ADDRESS);
   radio.setPALevel(RF24_PA_LOW);
@@ -16,6 +18,7 @@ void Remote::setup() {
 
   radio.stopListening();
   pinMode(Motor_Vibr, OUTPUT );
+  radio.printDetails(); // Affiche les détails de la configuration du module RF24 dans le moniteur série
 }
 
 bool Remote::sendRemoteData(const RemoteData& data) {
