@@ -8,6 +8,8 @@ void LCDDisplay::init() {
 }
 
 void LCDDisplay::print(const char* text) {
+  lcd.clear(); // Efface l'écran avant d'afficher le nouveau texte
+  lcd.setCursor(0, 0); // Positionne le curseur sur la première ligne
   lcd.print(text); // Affichage d'un texte sur l'écran
 }
 

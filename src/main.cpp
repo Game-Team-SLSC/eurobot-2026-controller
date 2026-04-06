@@ -54,7 +54,7 @@ enum EncoderState {
   ENCODER_A_HIGH_B_HIGH = 0b11
 };
 
-
+bool isYellow = false; // Variable pour suivre l'état de l'équipe affichée
 // Variables globales
 volatile byte score = 90; // Score initial
 byte lastScore = score;
@@ -182,11 +182,17 @@ void loop() {
     score = constrain(score, 0, 255);
     delay(100);
   }
-  
 
-  // // Mettre à jour l'affichage LCD
-  if ( lastScore != score) {
-    lcd.displayScore(score);
+  if (buttons[5].isHeld()) {
+    if (!isYellow) {
+      isYellow = true;
+      lcd.print("Team Yellow");
+    }
+  } else if (buttons[4].isHeld()) {
+    if (isYellow) {
+      isYellow = false;
+      lcd.print("Team Blue");
+    }
   }
   
   // Préparation des autres données
