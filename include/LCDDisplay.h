@@ -12,7 +12,6 @@ class LCDDisplay {
     LCDDisplay();
     void init(); // Initialisation de l'écran LCD
     void print(const char* text); // Affichage d'un texte sur l'écran
-    void displayScore(int score); // Affiche le score sur l'écran LCD
 };
 
 #endif

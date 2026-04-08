@@ -7,15 +7,16 @@
 enum class SWITCH_3_POS: uint8_t {UP, DOWN, MIDDLE};
 
 struct RemoteData {
-        JoystickData joystickLeft{};
-        JoystickData joystickRight{};
+    JoystickData joystickLeft{};
+    JoystickData joystickRight{};
 
-        bool buttons[15] = {
-            false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
-        };
-        // for each button true if pressed
-        uint8_t slider = 0; // 0 to 255
-        uint8_t score = 0;  // 0 to 255
+    
+    bool buttons[10] = {
+        false, false, false, false, false, false, false, false, false, false
     };
+    // for each button true if pressed
+    uint8_t slider = 0; // 0 to 255
+    bool isYellow = true;
+};
 
 #endif

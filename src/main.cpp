@@ -47,6 +47,10 @@
 #define SLIDER_PIN A8
 #define Motor_Vibr 56
 
+constexpr uint8_t RF_FREQ_HZ = 50;
+
+const uint8_t LOOP_DELAY_MS = 1000 / RF_FREQ_HZ;
+
 enum EncoderState {
   ENCODER_A_LOW_B_LOW = 0b00,
   ENCODER_A_HIGH_B_LOW = 0b01,
@@ -54,10 +58,7 @@ enum EncoderState {
   ENCODER_A_HIGH_B_HIGH = 0b11
 };
 
-bool isYellow = false; // Variable pour suivre l'état de l'équipe affichée
-// Variables globales
-volatile byte score = 90; // Score initial
-byte lastScore = score;
+bool isYellow = false;
 volatile EncoderState lastEncoderState = ENCODER_A_LOW_B_LOW;
 
 // Initialisation des objets
@@ -77,30 +78,6 @@ LCDDisplay lcd;
 Remote remote;
 
 // Fonction d'interruption pour mettre à jour la position de l'encodeur
-void updateEncoder() {
-  static EncoderState prevState = ENCODER_A_LOW_B_LOW;
-  EncoderState currState = (EncoderState)((digitalRead(ENCODER_A) << 1) | digitalRead(ENCODER_B));
-
-  Serial.println("Changed");
-
-  // Détection des crans uniquement sur 00 ou 11
-  if ((currState == ENCODER_A_HIGH_B_HIGH || currState == ENCODER_A_LOW_B_LOW) && currState != prevState) {
-    // Sens horaire : 00 -> 10 -> 11 ou 11 -> 01 -> 00
-    if ((prevState == ENCODER_A_HIGH_B_LOW && currState == ENCODER_A_HIGH_B_HIGH) ||
-        (prevState == ENCODER_A_LOW_B_HIGH && currState == ENCODER_A_LOW_B_LOW)) {
-      score++;
-    }
-    // Sens anti-horaire : 00 -> 01 -> 11 ou 11 -> 10 -> 00
-    else if ((prevState == ENCODER_A_LOW_B_HIGH && currState == ENCODER_A_HIGH_B_HIGH) ||
-             (prevState == ENCODER_A_HIGH_B_LOW && currState == ENCODER_A_LOW_B_LOW)) {
-      score--;
-    }
-    score = constrain(score, 0, 255);
-  }
-
-  prevState = currState;
-  lastEncoderState = currState;
-}
 
 // Configuration des interruptions PCINT
 void setupPCINT() {
@@ -114,21 +91,23 @@ void setupPCINT() {
 
 // Fonction d'interruption PCINT1 (broches 8 à 15)
 ISR(PCINT1_vect) {
-  updateEncoder(); // Appeler la fonction de mise à jour de l'encodeur
+  //updateEncoder(); // Appeler la fonction de mise à jour de l'encodeur
 }
 
 void setup() {
   Serial.begin(9600);
+  
+  // Initialisation de l'écran LCD
+  lcd.init();
+  lcd.print("Initialisation..."); // Message de démarrage
+
   remote.setup();
 
   pinMode(Motor_Vibr, OUTPUT );
-
-  // Configuration des broches des boutons
   for (int i = 0; i < 10; i++) {
     pinMode(buttons[i].getPin(), INPUT_PULLUP);
   }
 
-  // Configuration des broches des joysticks
   pinMode(JOYSTICK_LEFT_VERT, INPUT);
   pinMode(JOYSTICK_LEFT_HORIZ, INPUT);
   pinMode(JOYSTICK_LEFT_SW, INPUT);
@@ -137,34 +116,24 @@ void setup() {
   pinMode(JOYSTICK_RIGHT_HORIZ, INPUT);
   pinMode(JOYSTICK_RIGHT_SW, INPUT);
 
-  // Configuration des broches de l'encodeur
   pinMode(ENCODER_A, INPUT_PULLUP);
   pinMode(ENCODER_B, INPUT_PULLUP);
-  pinMode(ENCODER_SW, INPUT_PULLUP); // Broche du bouton de l'encodeur
+  pinMode(ENCODER_SW, INPUT_PULLUP);
 
-  // Configuration des broches du bouton à 3 positions
   pinMode(THREEPOS_UP, INPUT);
   pinMode(THREEPOS_DOWN, INPUT);
 
-  // Configuration des broches du slider
   pinMode(SLIDER_PIN, INPUT);
 
-  // Initialisation de la communication RF24
   remote.setup();
 
-  // Initialisation de l'écran LCD
-  lcd.init();
-  lcd.print("Initialisation"); // Message de démarrage
-  lcd.displayScore(score);
-
-  digitalWrite(Motor_Vibr, HIGH); //On allume le moteur
-  delay(500); // On fait une pause d'une seconde
-  digitalWrite(Motor_Vibr, LOW); // On éteint le moteur
-
-  // Configuration des interruptions PCINT pour l'encodeur
   setupPCINT();
-
-
+  
+  digitalWrite(Motor_Vibr, HIGH);
+  delay(500);
+  digitalWrite(Motor_Vibr, LOW);
+  
+  lcd.print(isYellow ? "Team Yellow" : "Team Blue");
 }
 
 void loop() {
@@ -173,22 +142,13 @@ void loop() {
   for (int i = 0; i < 10; i++) {
     buttons[i].update();
   }
-  
-  bool currentButtonState = digitalRead(ENCODER_SW); // LOW signifie appuyé (pull-up)
 
-  // // Si le bouton est pressé, ajouter 10 au score
-  if (!currentButtonState) {
-    score += 5;
-    score = constrain(score, 0, 255);
-    delay(100);
-  }
-
-  if (buttons[5].isHeld()) {
+  if (buttons[5].isPressed()) {
     if (!isYellow) {
       isYellow = true;
       lcd.print("Team Yellow");
     }
-  } else if (buttons[4].isHeld()) {
+  } else if (buttons[4].isPressed()) {
     if (isYellow) {
       isYellow = false;
       lcd.print("Team Blue");
@@ -203,24 +163,15 @@ void loop() {
     remoteData.buttons[i] = buttons[i].isHeld();
   }
 
-
   // Slider
   remoteData.slider = map(slider.readValue(), 0, 1023, 0, 255);
   remoteData.joystickRight = joystickRight.getData();
   remoteData.joystickLeft = joystickLeft.getData();
 
-  // Score
-  lastScore = score; // Utiliser la position de l'encodeur mise à jour par les interruptions
-
   // Envoi des autres données via RF24
-  remoteData.score = score; // Mettre à jour le score dans les données à envoyer
-  bool remoteDataSent = remote.sendRemoteData(remoteData);
-  if (remoteDataSent) {
-    //Serial.println("Autres données envoyées avec succès !");
-  } else {
-    //Serial.println("Échec de l'envoi des autres données.");
-  }
+  remoteData.isYellow = isYellow; // Mettre à jour la couleur dans les données à envoyer
+  remote.sendRemoteData(remoteData);
 
   // Délai pour stabiliser
-  delay(20);
+  delay(LOOP_DELAY_MS);
 }
