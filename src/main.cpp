@@ -47,9 +47,10 @@
 #define SLIDER_PIN A8
 #define Motor_Vibr 56
 
-constexpr uint8_t RF_FREQ_HZ = 50;
+constexpr uint8_t RF_FREQ_HZ = 100;
 
 const uint8_t LOOP_DELAY_MS = 1000 / RF_FREQ_HZ;
+constexpr uint32_t FRAME_STATS_INTERVAL_MS = 1000;
 
 enum EncoderState {
   ENCODER_A_LOW_B_LOW = 0b00,
@@ -76,6 +77,14 @@ ThreePosButton threePosButton(THREEPOS_UP, THREEPOS_DOWN);
 
 LCDDisplay lcd;
 Remote remote;
+uint32_t lastFrameStatsMs = 0;
+uint16_t framesSentThisSecond = 0;
+uint8_t lastSliderValue = 0;
+bool lastTeamState = false;
+uint32_t lastLCDUpdateMs = 0;
+const uint32_t LCD_REFRESH_PERIOD_MS = 200; // 5 Hz
+bool isConnected = true;
+bool lastConnectionState = true;
 
 // Fonction d'interruption pour mettre à jour la position de l'encodeur
 
@@ -106,7 +115,7 @@ void setup() {
   pinMode(Motor_Vibr, OUTPUT );
   for (int i = 0; i < 10; i++) {
     pinMode(buttons[i].getPin(), INPUT_PULLUP);
-  }
+  } 
 
   pinMode(JOYSTICK_LEFT_VERT, INPUT);
   pinMode(JOYSTICK_LEFT_HORIZ, INPUT);
@@ -133,10 +142,11 @@ void setup() {
   delay(500);
   digitalWrite(Motor_Vibr, LOW);
   
-  lcd.print(isYellow ? "Team Yellow" : "Team Blue");
+  lcd.printTeamAndSpeed(isYellow, 0);
 }
 
 void loop() {
+  uint32_t startTime = millis();
 
   // Mise à jour des capteurs
   for (int i = 0; i < 10; i++) {
@@ -146,12 +156,10 @@ void loop() {
   if (buttons[5].isPressed()) {
     if (!isYellow) {
       isYellow = true;
-      lcd.print("Team Yellow");
     }
   } else if (buttons[4].isPressed()) {
     if (isYellow) {
       isYellow = false;
-      lcd.print("Team Blue");
     }
   }
   
@@ -165,13 +173,60 @@ void loop() {
 
   // Slider
   remoteData.slider = map(slider.readValue(), 0, 1023, 0, 255);
+  uint8_t speedPercent = (remoteData.slider * 100) / 255;
+  if (speedPercent >= 99) speedPercent = 100; // Cap 99% and above to 100%
+  
+  // Mettre à jour l'écran LCD à 5 Hz ou si l'équipe change
+  uint32_t now = millis();
+  
+  bool teamChanged = (isYellow != lastTeamState);
+  if (!isConnected) {
+    if (lastConnectionState) {
+      lcd.print("RF Disconnected");
+      digitalWrite(Motor_Vibr, HIGH);
+      delay(200);
+      digitalWrite(Motor_Vibr, LOW);
+      lastConnectionState = false;
+    }
+  } else {
+    if (!lastConnectionState) {
+      digitalWrite(Motor_Vibr, HIGH);
+      delay(100);
+      digitalWrite(Motor_Vibr, LOW);
+    }
+    if (teamChanged or speedPercent != lastSliderValue or !lastConnectionState) {
+      lastConnectionState = true;
+      lcd.printTeamAndSpeed(isYellow, speedPercent);
+      lastTeamState = isYellow;
+      lastSliderValue = speedPercent; // Forcer la mise à jour du slider à l'écran
+      lastLCDUpdateMs = now; // Reset timer to avoid immediate refresh after team change
+    }
+  }
+  
   remoteData.joystickRight = joystickRight.getData();
   remoteData.joystickLeft = joystickLeft.getData();
 
   // Envoi des autres données via RF24
   remoteData.isYellow = isYellow; // Mettre à jour la couleur dans les données à envoyer
-  remote.sendRemoteData(remoteData);
+  if (remote.sendRemoteData(remoteData)) {
+    framesSentThisSecond++;
+  }
 
-  // Délai pour stabiliser
-  delay(LOOP_DELAY_MS);
+  if (lastFrameStatsMs == 0) {
+    lastFrameStatsMs = now;
+  }
+
+  if (now - lastFrameStatsMs >= FRAME_STATS_INTERVAL_MS) {
+    Serial.print("Frames sent/s: ");
+    Serial.println(framesSentThisSecond);
+    isConnected = (framesSentThisSecond > 0);
+    framesSentThisSecond = 0;
+    lastFrameStatsMs += FRAME_STATS_INTERVAL_MS;
+  }
+
+  // Délai pour stabiliser sans underflow si la boucle dépasse la période cible.
+  uint32_t elapsedMs = millis() - startTime;
+  if (elapsedMs < LOOP_DELAY_MS) {
+    delay(LOOP_DELAY_MS - elapsedMs);
+  }
 }

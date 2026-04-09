@@ -12,6 +12,7 @@ class LCDDisplay {
     LCDDisplay();
     void init(); // Initialisation de l'écran LCD
     void print(const char* text); // Affichage d'un texte sur l'écran
+    void printTeamAndSpeed(bool isYellow, uint8_t speedPercent); // Affichage de l'équipe et de la vitesse
 };
 
 #endif
